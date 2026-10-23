@@ -1,0 +1,61 @@
+PULSO — aplicativo esportivo web (PWA)
+===================================
+COMO ABRIR
+1. Para visualizar no computador, abra index.html em um navegador moderno, ou use o arquivo PULSO_Demonstracao.html fornecido separadamente.
+2. Para usar o GPS no celular e instalar como aplicativo, publique TODO o conteúdo desta pasta em um endereço HTTPS (por exemplo, GitHub Pages, Netlify ou sua própria hospedagem HTTPS). O endereço HTTP local 'localhost' também funciona para testes no computador.
+3. No celular, acesse o endereço HTTPS no navegador e escolha 'Adicionar à tela de início'/'Instalar aplicativo'.
+4. Ao iniciar treino ao ar livre, autorize o acesso à localização. Mantenha a tela aberta durante o treino para melhores resultados.
+FUNCIONALIDADES
+- 17 esportes, medição GPS e manual, rota no mapa e exportação GPX.
+- Treino livre ou meta de distância/tempo, alerta ao atingir a meta e opção de encerramento automático.
+- Turnos/intervalos personalizados com quantidade, esforço, descanso e aquecimento; cronômetro com alertas e programas rápidos.
+- Natação em piscina com registro de voltas; outras atividades manuais com tempo e distância ao final.
+- Musculação e calistenia com exercícios, variações, número de séries, repetições e carga opcional.
+- Resumo das atividades de força com mapa muscular esquemático, lista de exercícios e exportação PNG.
+- Imagens exportáveis com dados do treino e resumo automático ao finalizar.
+- Musculação e calistenia com exercícios, variações, número de séries, repetições e carga opcional.
+- Resumo das atividades de força com mapa muscular esquemático, lista de exercícios e exportação PNG.
+- Imagens exportáveis com dados do treino e resumo automático ao finalizar.
+- Clima atual, sensação térmica, vento, umidade, chuva, previsão para 7 dias e previsão por horário.
+- Busca de cidades, localização GPS para meteorologia, histórico, métricas e backup JSON.
+- Armazenamento local no dispositivo, opção de instalar como PWA e cache do aplicativo principal após primeira conexão.
+LIMITAÇÕES IMPORTANTES
+- GPS exige contexto seguro (HTTPS ou localhost) e consentimento. Abrir o HTML diretamente pode bloquear a localização.
+- O navegador do celular pode suspender o GPS e timers quando a tela for bloqueada, principalmente em segundo plano. Para GPS contínuo em segundo plano seria necessário um aplicativo nativo.
+- Mapas utilizam OpenStreetMap via Leaflet e previsão meteorológica utiliza Open-Meteo; esses recursos exigem internet. O monitoramento de tempo e o histórico local continuam úteis sem rede.
+- GPS debaixo d'água não é confiável. Use o registro manual de voltas na piscina.
+- Sem autenticação ou sincronização em nuvem: limpezas de dados do navegador podem apagar registros. Faça backups JSON periódicos.
+- Exportação GPX inclui o trajeto (coordenadas), mas não horários por ponto, pois apenas a geometria da rota é salva.
+FONTES/CRÉDITOS
+Previsão: https://open-meteo.com/
+Mapas: https://www.openstreetmap.org/
+Biblioteca de mapas: https://leafletjs.com/
+Os nomes e a identidade visual do PULSO são independentes do Strava.
+RECURSOS NOVOS: FLEXÃO PIKE, HANDGRIP, CORDA E SUSTENTAÇÕES
+- Catálogo ampliado com flexão pike, handgrip, pular corda, L-sit, dead hang, cadeira na parede, hollow hold, parada de mão, e outras variações.
+- Cada exercício pode usar séries por repetições ou por duração em segundos.
+- Sustentações podem usar o cronômetro de turnos com descanso, avisos e vibração, sem interromper o treino principal.
+- Imagem muscular vetorial detalhada e destacada por grupos musculares, sem depender de arquivos externos.
+- O resumo e o PNG exportado exibem séries, tempo e repetições corretamente.
+- O aplicativo Android continua em Kotlin e não possui classes Java.
+ATIVIDADES MISTAS E NOVOS EXERCÍCIOS
+- 65 exercícios, incluindo flexão em parada de mão (bananeira) sem apoio, muscle-up, front lever, planche, barra arqueiro, flexão nórdica, elevação pélvica e outras opções.
+- Corrida, ciclismo, natação e caminhada podem ser adicionados aos treinos de musculação ou calistenia como registros manuais de distância e tempo.
+- Natação permite comprimento da piscina e número de voltas, calculando metros totais automaticamente.
+- O card misto mostra músculos, exercícios, duração, distância e ritmo ou velocidade dos aeróbicos, sem mapa de GPS.
+- Para trajeto GPS, utilize uma atividade separada de corrida/ciclismo/natação ao ar livre.
+- O backup JSON preserva os itens aeróbicos da sessão mista.
+BUSCA DE CIDADES (ATUALIZAÇÃO)
+- A busca utiliza Open-Meteo e consulta o OpenStreetMap Nominatim caso o primeiro serviço esteja indisponível ou não encontre a cidade.
+- Erros de conexão exibem um aviso e um botão de nova tentativa; a pesquisa exige acesso à internet.
+- O cache do PWA foi atualizado e arquivos HTML, CSS e JavaScript passam a priorizar conteúdo novo quando a conexão estiver disponível.
+DRAGON FLAG (ATUALIZAÇÃO)
+- Sustentação da Dragon Flag por tempo como padrão, com séries e descanso pelo cronômetro interno.
+- Variações dinâmicas de Dragon Flag são registradas por repetições.
+YOGA E MODALIDADES (ATUALIZAÇÃO 1.5.0)
+- Dança foi removida da escolha de novos treinos; atividades antigas permanecem acessíveis no histórico.
+- Yoga agora possui catálogo de posturas, sequências sugeridas, foco da prática e duração por postura.
+- As sequências guiadas usam cronômetro próprio com pausas e transições; não precisam de GPS.
+- O resumo e o PNG mostram posturas realizadas, tempo e áreas da prática, sem mapa.
+- Os dados continuam no armazenamento local, com exportação e importação de backup.
+- Para Android, use o projeto Kotlin no Android Studio e compile no dispositivo.

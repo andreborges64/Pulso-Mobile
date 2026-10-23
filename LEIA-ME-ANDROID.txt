@@ -1,0 +1,20 @@
+PULSO — PROJETO ANDROID STUDIO EM KOTLIN
+VERSÃO PRONTA PARA ABRIR NO ANDROID STUDIO COM GRADLE 8.9
+================================================================
+1. Extraia o ZIP completamente no computador.
+2. Abra o Android Studio > Open e selecione a pasta PULSO_Android_Studio.
+3. Configure o JDK 17 no Gradle JDK e instale a plataforma Android SDK 35.
+4. Permita a sincronização. Na primeira utilização, o projeto obtém automaticamente o Wrapper oficial do Gradle 8.9, verifica sua assinatura SHA-256 e baixa o Gradle 8.9. Os plugins Android e Kotlin também serão baixados. A internet é necessária somente para essas etapas iniciais e eventuais dependências ainda não armazenadas.
+5. Selecione a variante debug e use Build > Generate Bundle(s) / APK(s) > Generate APK(s) (ou Build APK(s), conforme a versão do Android Studio).
+6. O APK de teste estará em app/build/outputs/apk/debug/app-debug.apk.
+O ZIP inclui gradlew, gradlew.bat, gradle/wrapper/gradle-wrapper.properties e gradle/wrapper/gradle-wrapper.jar.
+OBSERVAÇÃO SOBRE O WRAPPER
+Devido ao bloqueio de downloads de arquivos binários neste ambiente, o JAR inicialmente incluído é um iniciador mínimo. Na primeira execução, ele obtém o arquivo oficial gradle-8.9-wrapper.jar dos servidores Gradle ou do repositório Gradle/GitHub, validando o SHA-256 oficial 498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17 antes de executá-lo. A distribuição Gradle 8.9 também está protegida por SHA-256 em gradle-wrapper.properties.
+Isso elimina a necessidade de instalar o Gradle manualmente, mas NÃO inclui no ZIP a distribuição Gradle de aproximadamente 130 MB. Se estiver offline durante a primeira abertura, conecte-se à internet e sincronize novamente.
+VERSÕES
+Gradle 8.9; Android Gradle Plugin 8.7.3; Kotlin 2.0.21; Java/JDK 17 como ferramenta de compilação; compileSdk 35; minSdk 26; targetSdk 35.
+O código nativo do PULSO é Kotlin; a interface funciona em HTML/CSS/JavaScript com WebView. O iniciador Java compilado serve apenas ao Gradle e não integra o APK.
+TESTES E LIMITAÇÕES
+Os arquivos do projeto foram verificados, mas não foi possível compilar um APK neste ambiente por falta de SDK Android e acesso aos repositórios. O GPS em segundo plano não está implementado; use a tela ativa durante o percurso.
+PARA GITHUB ACTIONS
+Envie o conteúdo da pasta PULSO_Android_Studio para a raiz do repositório, abra Actions > Compilar APK do PULSO > Run workflow e baixe o artefato quando a compilação terminar.
