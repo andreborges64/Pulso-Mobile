@@ -41,12 +41,14 @@ jobs:
 
       - name: Instalar componentes Android
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Preparar Gradle
-        run: chmod +x ./gradlew
+      
+      - name: Configurar Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
       - name: Compilar APK de teste
-        run: ./gradlew --no-daemon assembleDebug
+        run: gradle --no-daemon assembleDebug
 
       - name: Disponibilizar o APK para download
         uses: actions/upload-artifact@v4
