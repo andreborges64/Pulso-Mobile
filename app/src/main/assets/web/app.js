@@ -127,8 +127,9 @@ const dateText = timestamp => new Date(timestamp).toLocaleDateString('pt-BR',{da
 const dateKey = d => [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 const idNow = () => `p-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
 let activities = safeRead(KEY_ACT, []);if(!Array.isArray(activities))activities=[];
-let settings = {sound:true,voice:false,vibration:true,alertIntensity:'intense',...safeRead(KEY_SETTINGS,{})};
+let settings = {sound:true,voice:false,vibration:true,alertIntensity:'intense',soundSource:'pulso',systemSoundName:'',...safeRead(KEY_SETTINGS,{})};
 if(!['standard','intense'].includes(settings.alertIntensity))settings.alertIntensity='intense';
+if(!['pulso','system'].includes(settings.soundSource))settings.soundSource='pulso';
 let strengthDraft=[],strengthTimer=null,yogaDraft=[],yogaTimer=null,selectedSport='run', goalMode='free', trackedActivity=null, gpsWatcher=null, map=null, polyline=null, gpsMarker=null, detailMap=null, interval=null, audioCtx=null, wakeLock=null;
 let weatherLocation = {name:'São Paulo, SP (referência)',lat:-23.5505,lon:-46.6333,viaGps:false,...safeRead(KEY_CITY,{})};
 let forecast=null, selectedDay=0, weatherFetchId=0, activeView='home';
@@ -268,7 +269,7 @@ function announce(msg,kind='info'){
  toast(msg);
  const urgent=['round_end','round_start','complete','goal'].includes(kind);
  if(window.PulsoAndroid?.playAlert){
-  try{window.PulsoAndroid.playAlert(kind,!!settings.sound,!!settings.vibration,settings.alertIntensity==='intense');}
+  try{window.PulsoAndroid.playAlert(kind,!!settings.sound,!!settings.vibration,settings.alertIntensity==='intense',settings.soundSource==='system');}
   catch(err){console.warn('Alarme Android indisponível',err);beep(kind);}
  }else{
   beep(kind);
@@ -287,6 +288,20 @@ async function enableNotifications(){if(!('Notification' in window)){toast('Noti
 $('top-notifications').addEventListener('click',enableNotifications);$('request-notifications').addEventListener('click',enableNotifications);
 function updateNotificationText(){$('notifications-state').textContent=!('Notification' in window)?'Indisponível neste navegador':Notification.permission==='granted'?'Notificações permitidas':Notification.permission==='denied'?'Permissão negada pelo navegador':'Opcional • pode exigir HTTPS';}
 for(const [id,key] of [['setting-sound','sound'],['setting-voice','voice'],['setting-vibration','vibration']]){$(id).checked=!!settings[key];$(id).addEventListener('change',e=>{settings[key]=e.target.checked;safeWrite(KEY_SETTINGS,settings);});}
+function renderAlertSoundSetting(){
+ $$('[data-sound-source]').forEach(button=>{const selected=button.dataset.soundSource===settings.soundSource;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));});
+ $('alert-sound-status').textContent=settings.soundSource==='system'?`Som do celular: ${settings.systemSoundName||'som padrão'}`:'Som original do PULSO';
+}
+function initAlertSoundSetting(){
+ const row=document.createElement('div');row.className='alert-sound-setting';row.innerHTML='<div class="alert-sound-copy"><strong>Som dos alertas</strong><small>Escolha o som do PULSO ou um toque do celular.</small></div><div class="alert-sound-controls"><div class="segmented sound-source-segment" role="group" aria-label="Origem do som"><button type="button" data-sound-source="pulso">PULSO</button><button type="button" data-sound-source="system">Celular</button></div><button class="secondary-btn" id="choose-system-sound" type="button">Escolher toque</button></div><small id="alert-sound-status" class="helper-text"></small>';
+ $('test-interval-alert').closest('.settings-action').before(row);
+ row.addEventListener('click',event=>{const button=event.target.closest('[data-sound-source]');if(!button)return;if(button.dataset.soundSource==='pulso'){settings.soundSource='pulso';safeWrite(KEY_SETTINGS,settings);renderAlertSoundSetting();return;}if(!window.PulsoAndroid?.chooseSystemSound){toast('A escolha de toques do sistema está disponível no app Android.','error');return;}window.PulsoAndroid.chooseSystemSound();});
+ $('choose-system-sound').addEventListener('click',()=>{if(window.PulsoAndroid?.chooseSystemSound)window.PulsoAndroid.chooseSystemSound();else toast('A escolha de toques do sistema está disponível no app Android.','error');});
+ renderAlertSoundSetting();
+}
+initAlertSoundSetting();
+window.PulsoAndroidSoundSelected=name=>{settings.soundSource='system';settings.systemSoundName=String(name||'Som do celular');safeWrite(KEY_SETTINGS,settings);renderAlertSoundSetting();toast(`Som selecionado: ${settings.systemSoundName}`);try{window.PulsoAndroid?.playAlert('info',true,false,false,true);}catch{}};
+window.PulsoAndroidSoundPickerFailed=()=>toast('Não foi possível abrir a seleção de sons do celular.','error');
 $('setting-intensity').value=settings.alertIntensity;
 $('setting-intensity').addEventListener('change',e=>{settings.alertIntensity=e.target.value;safeWrite(KEY_SETTINGS,settings);});
 $('test-interval-alert').addEventListener('click',()=>{unlockAudio();announce('Teste do alarme de fim de turno!','round_end');});

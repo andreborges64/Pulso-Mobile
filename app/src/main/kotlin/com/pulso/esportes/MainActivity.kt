@@ -7,9 +7,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.Ringtone
+import android.media.RingtoneManager
 import android.media.AudioTrack
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Base64
@@ -28,6 +31,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.Toast
+import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -44,6 +48,9 @@ class MainActivity : Activity() {
         private const val REQUEST_LOCATION = 8301
         private const val REQUEST_DOWNLOAD = 8302
         private const val REQUEST_UPLOAD = 8303
+        private const val REQUEST_SYSTEM_SOUND = 8304
+        private const val PREFS_NAME = "pulso_preferences"
+        private const val PREF_SYSTEM_SOUND_URI = "system_sound_uri"
     }
     private val executor = Executors.newSingleThreadExecutor()
     private lateinit var navegador: WebView
@@ -52,6 +59,7 @@ class MainActivity : Activity() {
     private var retornoArquivo: ValueCallback<Array<Uri>>? = null
     private var arquivoPendente: ByteArray? = null
     private var alarmeAtual: AudioTrack? = null
+    private var toqueSistemaAtual: Ringtone? = null
     private var geracaoAlarme = 0
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -154,6 +162,14 @@ class MainActivity : Activity() {
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_SYSTEM_SOUND && resultCode == RESULT_OK) {
+            val uri = ringtoneResultUri(data) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            if (uri != null) {
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(PREF_SYSTEM_SOUND_URI, uri.toString()).apply()
+                val title = try { RingtoneManager.getRingtone(this, uri)?.getTitle(this) ?: "Som do celular" } catch (_: Exception) { "Som do celular" }
+                navegador.evaluateJavascript("window.PulsoAndroidSoundSelected&&window.PulsoAndroidSoundSelected(${JSONObject.quote(title)});", null)
+            }
+        }
         if (requestCode == REQUEST_UPLOAD) {
             retornoArquivo?.onReceiveValue(if (resultCode == RESULT_OK && data?.data != null) arrayOf(data.data!!) else null)
             retornoArquivo = null
@@ -172,11 +188,36 @@ class MainActivity : Activity() {
             }
         }
     }
+    @Suppress("DEPRECATION")
+    private fun ringtoneResultUri(data: Intent?): Uri? = if (Build.VERSION.SDK_INT >= 33) {
+        data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+    } else {
+        data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+    }
+    private fun chooseSystemSound() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val defaultUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        val existingUri = prefs.getString(PREF_SYSTEM_SOUND_URI, null)?.let(Uri::parse) ?: defaultUri
+        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+            putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Escolha o som dos alertas")
+            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+            putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, defaultUri)
+            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+            putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, existingUri)
+        }
+        try {
+            startActivityForResult(intent, REQUEST_SYSTEM_SOUND)
+        } catch (_: ActivityNotFoundException) {
+            navegador.evaluateJavascript("window.PulsoAndroidSoundPickerFailed&&window.PulsoAndroidSoundPickerFailed();", null)
+        }
+    }
     inner class PonteAndroid {
         @JavascriptInterface fun keepScreenOn(active: Boolean) {
             runOnUiThread { if (active) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
         }
-        @JavascriptInterface fun playAlert(kind: String?, sound: Boolean, vibrate: Boolean, strong: Boolean) { runOnUiThread { tocarAlarme(kind, sound, vibrate, strong) } }
+        @JavascriptInterface fun playAlert(kind: String?, sound: Boolean, vibrate: Boolean, strong: Boolean, useSystemSound: Boolean) { runOnUiThread { tocarAlarme(kind, sound, vibrate, strong, useSystemSound) } }
+        @JavascriptInterface fun chooseSystemSound() { runOnUiThread { this@MainActivity.chooseSystemSound() } }
         @JavascriptInterface fun saveFile(filename: String?, mimeType: String?, contentBase64: String?) {
             if (filename.isNullOrBlank() || contentBase64 == null || contentBase64.length > 20 * 1024 * 1024) return
             try {
@@ -193,7 +234,7 @@ class MainActivity : Activity() {
             } catch (_: IllegalArgumentException) { Log.w(TAG, "Arquivo base64 inválido") }
         }
     }
-    private fun tocarAlarme(tipo: String?, som: Boolean, vibrar: Boolean, forte: Boolean) {
+    private fun tocarAlarme(tipo: String?, som: Boolean, vibrar: Boolean, forte: Boolean, usarSomSistema: Boolean) {
         val urgente = tipo in listOf("round_end", "round_start", "complete", "goal")
         if (vibrar) {
             val vibrator = getSystemService(VIBRATOR_SERVICE) as? Vibrator
@@ -206,6 +247,9 @@ class MainActivity : Activity() {
         val generation = ++geracaoAlarme
         try { alarmeAtual?.stop(); alarmeAtual?.release() } catch (_: Exception) {}
         alarmeAtual = null
+        try { toqueSistemaAtual?.stop() } catch (_: Exception) {}
+        toqueSistemaAtual = null
+        if (usarSomSistema && tocarToqueSistema()) return
         // O alerta forte usa pulsos alternados e o canal de volume de alarmes do Android.
         executor.execute {
             val sampleRate = 22050
@@ -234,6 +278,20 @@ class MainActivity : Activity() {
             }
         }
     }
+    private fun tocarToqueSistema(): Boolean {
+        val savedUri = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(PREF_SYSTEM_SOUND_URI, null)
+        val uri = savedUri?.let(Uri::parse) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: return false
+        return try {
+            val ringtone = RingtoneManager.getRingtone(this, uri) ?: return false
+            ringtone.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+            ringtone.play()
+            toqueSistemaAtual = ringtone
+            true
+        } catch (error: Exception) {
+            Log.w(TAG, "Não foi possível reproduzir o toque selecionado", error)
+            false
+        }
+    }
     @Deprecated("Compatibilidade com a navegação do Android")
     override fun onBackPressed() {
         navegador.evaluateJavascript("(function(){var d=document.getElementById('activity-dialog');if(d&&d.open){d.close();return true}return false})()") { result ->
@@ -241,5 +299,5 @@ class MainActivity : Activity() {
         }
     }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); navegador.saveState(outState) }
-    override fun onDestroy() { geracaoAlarme++; try { alarmeAtual?.stop(); alarmeAtual?.release() } catch (_: Exception) {}; executor.shutdownNow(); navegador.destroy(); super.onDestroy() }
+    override fun onDestroy() { geracaoAlarme++; try { alarmeAtual?.stop(); alarmeAtual?.release(); toqueSistemaAtual?.stop() } catch (_: Exception) {}; executor.shutdownNow(); navegador.destroy(); super.onDestroy() }
 }
