@@ -46,6 +46,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+          validate-wrappers: false
 
       - name: Compilar APK de teste
         run: gradle --no-daemon assembleDebug
