@@ -95,14 +95,26 @@ class LocationTrackingService : Service(), LocationListener {
         tracking = true
         trackingStartedAtElapsed = SystemClock.elapsedRealtime()
         persistSnapshot()
-        try {
-            locations.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, this, Looper.getMainLooper())
-            locations.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 3000L, 0f, this, Looper.getMainLooper())
-        } catch (_: SecurityException) {
+        var requested = false
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            try {
+                locations.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, this, Looper.getMainLooper())
+                requested = true
+            } catch (_: SecurityException) { }
+            catch (_: IllegalArgumentException) { }
+        }
+        if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            try {
+                locations.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 3000L, 0f, this, Looper.getMainLooper())
+                requested = true
+            } catch (_: SecurityException) { }
+            catch (_: IllegalArgumentException) { }
+        }
+        if (!requested) {
             tracking = false
+            persistSnapshot()
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
-        } catch (_: IllegalArgumentException) {
-            // Continue with whichever provider is available.
         }
     }
 
@@ -128,7 +140,8 @@ class LocationTrackingService : Service(), LocationListener {
 
     override fun onLocationChanged(location: Location) {
         if (!tracking || !location.latitude.isFinite() || !location.longitude.isFinite()) return
-        if (location.accuracy > 60f) return
+        val accuracyLimit = if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) 60f else 150f
+        if (location.accuracy > accuracyLimit) return
         val prior = last
         if (prior != null) {
             val dt = (location.time - prior.time) / 1000.0
