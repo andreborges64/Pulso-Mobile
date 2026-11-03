@@ -84,6 +84,9 @@ class MainActivity : Activity() {
             setSupportZoom(false)
             builtInZoomControls = false
             displayZoomControls = false
+            useWideViewPort = true
+            loadWithOverviewMode = false
+            textZoom = 100
         }
         navegador.webViewClient = ClienteLocal()
         navegador.webChromeClient = ClienteWeb()
@@ -105,6 +108,10 @@ class MainActivity : Activity() {
         else -> "application/octet-stream"
     }
     private inner class ClienteLocal : WebViewClient() {
+        override fun onPageFinished(view: WebView?, url: String?) {
+            super.onPageFinished(view, url)
+            if (origemPermitida(url)) view?.setInitialScale(100)
+        }
         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest): WebResourceResponse? {
             val uri = request.url
             if (!origemPermitida(uri.toString())) return null
