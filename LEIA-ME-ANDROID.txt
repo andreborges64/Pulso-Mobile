@@ -18,3 +18,9 @@ TESTES E LIMITAÇÕES
 Os arquivos do projeto foram verificados, mas não foi possível compilar um APK neste ambiente por falta de SDK Android e acesso aos repositórios. O GPS em segundo plano não está implementado; use a tela ativa durante o percurso.
 PARA GITHUB ACTIONS
 Envie o conteúdo da pasta PULSO_Android_Studio para a raiz do repositório, abra Actions > Compilar APK do PULSO > Run workflow e baixe o artefato quando a compilação terminar.
+
+VERSÃO 1.6.0
+- Artes Marciais configurável, Judô e Jiu-jitsu com registro de técnicas por faixa e categoria.
+- Android usa rastreamento GPS em Foreground Service com notificação persistente. Autorize localização precisa; alguns aparelhos podem exigir configuração de bateria sem restrições.
+- Distância e pontos do percurso são mantidos pelo serviço durante a tela bloqueada e recuperados ao reabrir o aplicativo.
+- Compatibilidade Android: API 26 ou superior; a permissão de notificações controla a exibição da notificação na gaveta do sistema.

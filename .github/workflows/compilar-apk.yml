@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - feature/pulso-1.6
     paths:
       - 'app/**'
       - 'gradle/**'
@@ -48,8 +49,11 @@ jobs:
           gradle-version: '8.9'
           validate-wrappers: false
 
+      - name: Validar sintaxe JavaScript
+        run: node --check app/src/main/assets/web/app.js
+
       - name: Compilar APK de teste
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon testDebugUnitTest assembleDebug
 
       - name: Disponibilizar o APK para download
         uses: actions/upload-artifact@v4
