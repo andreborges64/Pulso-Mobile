@@ -81,6 +81,9 @@ class MainActivity : Activity() {
             allowFileAccess = false
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
+            setSupportZoom(false)
+            builtInZoomControls = false
+            displayZoomControls = false
         }
         navegador.webViewClient = ClienteLocal()
         navegador.webChromeClient = ClienteWeb()
