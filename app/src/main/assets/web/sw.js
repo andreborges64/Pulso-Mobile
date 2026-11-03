@@ -1,4 +1,4 @@
-const CACHE='pulso-pwa-v12';
+const CACHE='pulso-pwa-v13';
 const SHELL=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./assets/yoga/montanha.webp','./assets/yoga/crianca.webp','./assets/yoga/cachorro.webp','./assets/yoga/gato_vaca.webp','./assets/yoga/cobra.webp','./assets/yoga/esfinge.webp','./assets/yoga/guerreiro1.webp','./assets/yoga/guerreiro2.webp','./assets/yoga/triangulo.webp','./assets/yoga/arvore.webp','./assets/yoga/pombo.webp','./assets/yoga/borboleta.webp','./assets/yoga/pinça.webp','./assets/yoga/cadeira.webp','./assets/yoga/prancha_yoga.webp','./assets/yoga/ponte_yoga.webp','./assets/yoga/torcao.webp','./assets/yoga/joelho_peito.webp','./assets/yoga/respiracao.webp','./assets/yoga/savasana.webp'];
 self.addEventListener('install',evento=>{evento.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',evento=>{evento.waitUntil(caches.keys().then(chaves=>Promise.all(chaves.filter(chave=>chave!==CACHE).map(chave=>caches.delete(chave)))).then(()=>self.clients.claim()));});

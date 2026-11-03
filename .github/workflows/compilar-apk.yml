@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - feature/pulso-1.6
     paths:
       - 'app/**'
       - 'gradle/**'

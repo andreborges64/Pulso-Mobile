@@ -13,6 +13,7 @@ import android.media.AudioTrack
 import android.net.Uri
 import android.os.Bundle
 import android.os.Build
+import android.provider.Settings
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Base64
@@ -49,6 +50,7 @@ class MainActivity : Activity() {
         private const val REQUEST_DOWNLOAD = 8302
         private const val REQUEST_UPLOAD = 8303
         private const val REQUEST_SYSTEM_SOUND = 8304
+        private const val REQUEST_TRACKING_PERMISSIONS = 8305
         private const val PREFS_NAME = "pulso_preferences"
         private const val PREF_SYSTEM_SOUND_URI = "system_sound_uri"
     }
@@ -61,6 +63,8 @@ class MainActivity : Activity() {
     private var alarmeAtual: AudioTrack? = null
     private var toqueSistemaAtual: Ringtone? = null
     private var geracaoAlarme = 0
+    private var trackingActivityId: String? = null
+    private var trackingSport: String? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = 0xFF0A0F12.toInt()
@@ -159,6 +163,18 @@ class MainActivity : Activity() {
             permissaoGps = null
             origemGps = null
         }
+        if (requestCode == REQUEST_TRACKING_PERMISSIONS) {
+            val locationGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            val id = trackingActivityId
+            if (locationGranted && id != null) {
+                startLocationService(id, trackingSport.orEmpty())
+                navegador.evaluateJavascript("window.PulsoAndroidGpsStarted&&window.PulsoAndroidGpsStarted();", null)
+            } else {
+                navegador.evaluateJavascript("window.PulsoAndroidGpsDenied&&window.PulsoAndroidGpsDenied();", null)
+            }
+            trackingActivityId = null
+            trackingSport = null
+        }
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -213,6 +229,38 @@ class MainActivity : Activity() {
         }
     }
     inner class PonteAndroid {
+        @JavascriptInterface fun startLocationTracking(activityId: String?, sport: String?, elapsedMs: Long): Boolean {
+            if (activityId.isNullOrBlank()) return false
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                startLocationService(activityId, sport.orEmpty(), elapsedMs)
+                return true
+            }
+            runOnUiThread {
+                trackingActivityId = activityId
+                trackingSport = sport
+                val permissions = mutableListOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+                requestPermissions(permissions.toTypedArray(), REQUEST_TRACKING_PERMISSIONS)
+            }
+            return false
+        }
+        @JavascriptInterface fun stopLocationTracking(finished: Boolean) {
+            runOnUiThread {
+                val action = if (finished) LocationTrackingService.ACTION_STOP else LocationTrackingService.ACTION_PAUSE
+                val intent = Intent(this@MainActivity, LocationTrackingService::class.java).setAction(action)
+                try { startService(intent) } catch (_: Exception) { stopService(intent) }
+            }
+        }
+        @JavascriptInterface fun getLocationSnapshot(): String {
+            return getSharedPreferences(LocationTrackingService.PREFS, MODE_PRIVATE)
+                .getString(LocationTrackingService.KEY_SNAPSHOT, "{}") ?: "{}"
+        }
+        @JavascriptInterface fun openBatterySettings() {
+            runOnUiThread {
+                try { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+                catch (_: Exception) { Toast.makeText(this@MainActivity, "Abra Configurações > Apps > PULSO > Bateria para permitir atividade em segundo plano.", Toast.LENGTH_LONG).show() }
+            }
+        }
         @JavascriptInterface fun keepScreenOn(active: Boolean) {
             runOnUiThread { if (active) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
         }
@@ -232,6 +280,20 @@ class MainActivity : Activity() {
                     try { startActivityForResult(intent, REQUEST_DOWNLOAD) } catch (_: Exception) { arquivoPendente = null; Toast.makeText(this@MainActivity, "Não foi possível salvar", Toast.LENGTH_SHORT).show() }
                 }
             } catch (_: IllegalArgumentException) { Log.w(TAG, "Arquivo base64 inválido") }
+        }
+    }
+    private fun startLocationService(activityId: String, sport: String, elapsedMs: Long = 0L) {
+        val intent = Intent(this, LocationTrackingService::class.java).apply {
+            action = LocationTrackingService.ACTION_START
+            putExtra(LocationTrackingService.EXTRA_ID, activityId)
+            putExtra(LocationTrackingService.EXTRA_SPORT, sport)
+            putExtra(LocationTrackingService.EXTRA_ELAPSED_MS, elapsedMs)
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+        } catch (error: Exception) {
+            Log.e(TAG, "Não foi possível iniciar o serviço de GPS", error)
+            Toast.makeText(this, "Não foi possível iniciar o GPS em segundo plano", Toast.LENGTH_LONG).show()
         }
     }
     private fun tocarAlarme(tipo: String?, som: Boolean, vibrar: Boolean, forte: Boolean, usarSomSistema: Boolean) {
