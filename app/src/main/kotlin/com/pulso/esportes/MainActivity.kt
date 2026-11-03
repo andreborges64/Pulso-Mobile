@@ -18,6 +18,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Base64
 import android.util.Log
+import android.view.View
 import android.view.WindowManager
 import android.webkit.GeolocationPermissions
 import android.webkit.JavascriptInterface
@@ -71,6 +72,7 @@ class MainActivity : Activity() {
         window.navigationBarColor = 0xFF0A0F12.toInt()
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         navegador = WebView(this)
+        navegador.overScrollMode = View.OVER_SCROLL_NEVER
         navegador.setBackgroundColor(0xFF0A0F12.toInt())
         setContentView(navegador)
         navegador.settings.apply {
